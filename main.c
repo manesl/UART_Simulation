@@ -13,8 +13,7 @@ pthread_t tid1, tid2;
 pthread_attr_t attr;
 
 unsigned char* senderFIFO;
-int count=0; //no of 0xA55A
-int bufferFull=0;
+int count=0, bufferFull=0;
 bool flag=false, txFlag=false, processCompleteFlag=true;
 
 int main(){	
@@ -30,14 +29,12 @@ int main(){
 }
 
 void receiveBufferFull(void){
-	if(processCompleteFlag){
+	if(processCompleteFlag)
 		pthread_create(&tid2, &attr, processing, NULL);
-	}
 	else{
 		while(!processCompleteFlag); //you wait until the tid2 thread completes
 		pthread_create(&tid2, &attr, processing, NULL);
 	}
-	printf("not waiting for the tid2 to join back and returning\n");
 }
 
 void* sender(void* param){
@@ -49,13 +46,13 @@ void* sender(void* param){
 	for(i=2; i<32; i++){
 		senderFIFO[j]=0xFF;
 		bufferFull++;
-		j++;
-		printf("senderFIFO[%d]:%d, bufferFull:%d, next j:%d\n", j-1, senderFIFO[j-1], bufferFull, j); 
+		j++; 
 		//generate an interrupt whenever we fully fill it
 		if(bufferFull==16){
+			flag=false;
 			bufferFull=0;
-			receiveBufferFull();
 			j=0;
+			receiveBufferFull();
 			while(!txFlag);//wait until the processing func makes a local copy
 			txFlag=false;//for next transmission
 		}
@@ -71,7 +68,7 @@ void transmitComplete(void){
 
 void* processing(void* param){
 	processCompleteFlag=false;
-	pthread_detach(pthread_self());//detach itself from calling thread
+	pthread_detach(pthread_self());//detach itself from calling thread which is receiveBufferFull() ISR
 	printf("This is processing function of UART\n");
 	unsigned char* receiverFIFO = (unsigned char*) malloc(sizeof(unsigned char)*16);
 	memcpy(receiverFIFO, senderFIFO, 16);
