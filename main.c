@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 #include <string.h>
+#include <stdint.h>
 
 void* sender(void* param);
 void receiveBufferFull(void);
@@ -12,19 +14,18 @@ void transmitComplete(void);
 pthread_t tid1, tid2;
 pthread_attr_t attr;
 
-unsigned char* senderFIFO;
+uint8_t* senderFIFO;
 int count=0, bufferFull=0;
 bool flag=false, txFlag=false, processCompleteFlag=true;
 
 int main(){	
-	
-	senderFIFO = (unsigned char*) calloc(16, sizeof(unsigned char));
 	pthread_attr_init(&attr);
-	
+		
 	pthread_create(&tid1, &attr, sender, NULL);		
 	pthread_join(tid1,NULL);
-		
+			
 	printf("count of start sequence is %d\n", count);
+	free(senderFIFO);
 	return 0;
 }
 
@@ -38,23 +39,29 @@ void receiveBufferFull(void){
 }
 
 void* sender(void* param){
-	printf("This is sender function of UART\n");
-	senderFIFO[0]=0xA5;
-	senderFIFO[1]=0x5A;
-	bufferFull=bufferFull+2;
-	int i, j = 2;
-	for(i=2; i<32; i++){
-		senderFIFO[j]=0xFF;
-		bufferFull++;
-		j++; 
-		//generate an interrupt whenever we fully fill it
-		if(bufferFull==16){
+	FILE* fp = fopen("example.csv", "r");
+	if(!fp) printf("file cannot be opened\n");
+	else {
+		char buffer[100];
+		int length = 16;
+		int i;
+		printf("This is sender function of UART\n");
+		senderFIFO = (uint8_t*) calloc(16, sizeof(uint8_t));
+		if(senderFIFO==NULL) printf("could not allocate heap\n");
+		while( fgets(buffer, 100, fp) ){
+			i=0;
+			senderFIFO[i++]=strtol(strtok(buffer, ","), NULL, 16);
+			while(length){
+				printf("%x ", senderFIFO[i-1]);
+				length--;
+				senderFIFO[i++]=strtol(strtok(NULL, ","), NULL, 16);
+			}
 			flag=false;
-			bufferFull=0;
-			j=0;
+			length=16;
 			receiveBufferFull();
 			while(!txFlag);//wait until the processing func makes a local copy
 			txFlag=false;//for next transmission
+			printf("\n");
 		}
 	}
 
@@ -70,16 +77,16 @@ void* processing(void* param){
 	processCompleteFlag=false;
 	pthread_detach(pthread_self());//detach itself from calling thread which is receiveBufferFull() ISR
 	printf("This is processing function of UART\n");
-	unsigned char* receiverFIFO = (unsigned char*) malloc(sizeof(unsigned char)*16);
+	uint8_t* receiverFIFO = (uint8_t*) malloc(sizeof(uint8_t)*16);
 	memcpy(receiverFIFO, senderFIFO, 16);
 	//call transmitComplete interrupt
 	transmitComplete();
 	int i=0;
 	for(;i<16;i++){
 		if(i!=15){
-			if(receiverFIFO[i]==0xA5 && receiverFIFO[i+1]==0x5A) count++;
+			if(receiverFIFO[i]==0x5a && receiverFIFO[i+1]==0xa5) count++;
 		}
-		printf("processing receiverFIFO[%d]:%d\n", i, receiverFIFO[i]);
+		printf("processing receiverFIFO[%d]:%x\n", i, receiverFIFO[i]);
 	}
 	processCompleteFlag=true;
 	flag=true;
