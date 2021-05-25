@@ -14,6 +14,7 @@ CMD line encoding: UTF-8 (en-US)
 
 Instructions: make clean->make all->./main.out are the commands needed to be ran.
               After that if you want to add personal test cases, add in the test.csv file but also append a comma in the end.
+
 Files:
 
 main.c: It creates the first sender thread and it waits on it to join back. When the sender thread completes all of its operation. We can display the updated value of the count variable.
