@@ -26,7 +26,7 @@ ii)transmitBufferFull ISR
 iii)processing function
 iv)receiveComplete ISR
 
-packet.h: header file for packet.c with function prototypes.
+uart.h: header file for packet.c with function prototypes.
 
 test.csv: It has the test cases that will be read by the sender thread.
 					
