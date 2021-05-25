@@ -1,6 +1,6 @@
-OBJS = main.c 
+OBJS = main.c uart.c
 CC = gcc
-CFLAGS = -std=c99 -Werror -g -O0 -lpthread
+CFLAGS = -std=c99 -Werror -g -O0 -lpthread -I ./
 
 main.out:$(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS) 
